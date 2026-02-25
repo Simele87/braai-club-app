@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Braai Club — Cost Control System</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --fire: #E8571A;
+    --ember: #C8401A;
+    --coal: #1A1410;
+    --ash: #2E2820;
+    --smoke: #3D3630;
+    --oak: #8B6914;
+    --cream: #F5F0E8;
+    --muted: #9B9088;
+    --green: #2D7A4F;
+    --red: #C0392B;
+    --amber: #E8A020;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--coal); color: var(--cream); min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ===== LOGIN ===== */
+  #login-screen { position: fixed; inset: 0; background: var(--coal); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+  #login-screen.hidden { display: none; }
+
+  .login-logo { font-family: 'Bebas Neue', sans-serif; font-size: 52px; letter-spacing: 6px; color: var(--cream); margin-bottom: 4px; text-align:center; }
+  .login-logo span { color: var(--fire); }
+  .login-tagline { font-size: 11px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 44px; }
+
+  .login-box { background: var(--ash); border: 1px solid var(--smoke); border-radius: 12px; padding: 36px; width: 100%; max-width: 440px; }
+
+  .login-step { display: none; }
+  .login-step.active { display: block; }
+
+  .ls-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; margin-bottom: 4px; }
+  .ls-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+  .user-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+
+  .user-card { background: var(--coal); border: 2px solid var(--smoke); border-radius: 8px; padding: 16px 12px; cursor: pointer; text-align: center; transition: all 0.15s; }
+  .user-card:hover { border-color: var(--fire); }
+  .user-card.selected { border-color: var(--fire); background: rgba(232,87,26,0.08); }
+
+  .avatar { width: 44px; height: 44px; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif; font-size: 18px; }
+  .av-owner { background: var(--fire); color: white; }
+  .av-manager { background: var(--oak); color: white; }
+  .av-kitchen { background: var(--smoke); color: var(--cream); }
+  .av-viewer { background: #2c4a6e; color: var(--cream); }
+
+  .uname { font-size: 13px; font-weight: 600; color: var(--cream); margin-bottom: 2px; }
+  .urole { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  .usetup { font-size: 10px; color: var(--amber); margin-top: 4px; }
+
+  .add-user-btn { width: 100%; background: transparent; border: 2px dashed var(--smoke); border-radius: 8px; padding: 11px; color: var(--muted); font-size: 13px; cursor: pointer; transition: all 0.15s; margin-top: 4px; }
+  .add-user-btn:hover { border-color: var(--fire); color: var(--fire); }
+
+  .add-user-form { display: none; margin-top: 16px; border-top: 1px solid var(--smoke); padding-top: 16px; }
+  .add-user-form.show { display: block; }
+
+  /* PIN PAD */
+  .pin-display { display: flex; justify-content: center; gap: 14px; margin-bottom: 24px; }
+  .pin-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--smoke); background: transparent; transition: all 0.15s; }
+  .pin-dot.filled { background: var(--fire); border-color: var(--fire); }
+  .pin-dot.error { background: var(--red); border-color: var(--red); animation: shake 0.3s; }
+
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+
+  .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 260px; margin: 0 auto; }
+  .pin-key { background: var(--coal); border: 1px solid var(--smoke); border-radius: 8px; padding: 15px; font-family: 'DM Sans', sans-serif; font-size: 20px; font-weight: 600; color: var(--cream); cursor: pointer; text-align: center; transition: all 0.1s; user-select: none; }
+  .pin-key:hover { background: var(--smoke); }
+  .pin-key:active { transform: scale(0.93); background: var(--fire); border-color: var(--fire); }
+  .pin-key.del { font-size: 16px; color: var(--muted); }
+  .pin-key.empty { visibility: hidden; }
+
+  .pin-error { text-align: center; font-size: 13px; color: #E57373; margin-top: 12px; min-height: 20px; }
+  .login-back { background: transparent; border: none; color: var(--muted); font-size: 13px; cursor: pointer; margin-top: 16px; width: 100%; text-align: center; padding: 8px; }
+  .login-back:hover { color: var(--cream); }
+
+  /* ===== APP ===== */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+  #app.visible { display: flex; }
+
+  .header { background: var(--ash); border-bottom: 2px solid var(--fire); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 64px; position: sticky; top: 0; z-index: 100; }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 3px; color: var(--cream); }
+  .logo span { color: var(--fire); }
+
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .date-display { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+
+  .user-chip { display: flex; align-items: center; gap: 8px; background: var(--coal); border: 1px solid var(--smoke); border-radius: 20px; padding: 5px 12px 5px 5px; }
+  .chip-av { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif; font-size: 12px; flex-shrink: 0; }
+  .chip-name { font-size: 12px; font-weight: 600; color: var(--cream); }
+  .chip-role { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .logout-btn { background: transparent; border: 1px solid var(--smoke); border-radius: 6px; padding: 6px 12px; color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.15s; }
+  .logout-btn:hover { border-color: var(--red); color: #E57373; }
+
+  .nav { background: var(--ash); border-bottom: 1px solid var(--smoke); display: flex; padding: 0 32px; gap: 4px; overflow-x: auto; }
+  .nav-btn { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; padding: 14px 20px; background: transparent; color: var(--muted); border: none; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.15s; white-space: nowrap; }
+  .nav-btn:hover { color: var(--cream); }
+  .nav-btn.active { color: var(--fire); border-bottom-color: var(--fire); }
+  .nav-btn.locked { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+
+  .main { flex: 1; padding: 28px 32px; max-width: 1400px; width: 100%; margin: 0 auto; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card { background: var(--ash); border: 1px solid var(--smoke); border-radius: 8px; padding: 24px; }
+  .card-title { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--cream); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+  .card-title .dot { width: 8px; height: 8px; background: var(--fire); border-radius: 50%; }
+
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .metric { background: var(--ash); border: 1px solid var(--smoke); border-radius: 8px; padding: 18px 20px; position: relative; overflow: hidden; }
+  .metric::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--fire); }
+  .metric.green::before { background: var(--green); }
+  .metric.amber::before { background: var(--amber); }
+  .metric.red::before { background: var(--red); }
+  .metric-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 8px; }
+  .metric-value { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 1px; color: var(--cream); line-height: 1; }
+  .metric-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 6px; }
+  input, select { width: 100%; background: var(--coal); border: 1px solid var(--smoke); border-radius: 6px; padding: 10px 14px; color: var(--cream); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.15s; }
+  input:focus, select:focus { border-color: var(--fire); }
+  select option { background: var(--coal); }
+
+  .form-row { display: grid; gap: 16px; margin-bottom: 16px; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .cols-5 { grid-template-columns: 1fr 1fr 1fr 1fr 1fr; }
+
+  .btn { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.5px; padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.15s; }
+  .btn-fire { background: var(--fire); color: white; }
+  .btn-fire:hover { background: var(--ember); }
+  .btn-outline { background: transparent; border: 1px solid var(--smoke); color: var(--muted); }
+  .btn-outline:hover { border-color: var(--cream); color: var(--cream); }
+  .btn-sm { padding: 7px 14px; font-size: 12px; }
+  .btn-ghost { background: transparent; color: var(--muted); border: none; cursor: pointer; font-size: 12px; }
+  .btn-ghost:hover { color: #E57373; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--coal); border-bottom: 2px solid var(--smoke); }
+  th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--smoke); transition: background 0.1s; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  td { padding: 11px 14px; color: var(--cream); vertical-align: middle; }
+  td.mono { font-family: 'DM Mono', monospace; font-size: 13px; }
+
+  .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
+  .bg-green { background: rgba(45,122,79,0.2); color: #4CAF50; }
+  .bg-red { background: rgba(192,57,43,0.2); color: #E57373; }
+  .bg-amber { background: rgba(232,160,32,0.2); color: var(--amber); }
+  .bg-blue { background: rgba(41,128,185,0.2); color: #64B5F6; }
+  .bg-fire { background: rgba(232,87,26,0.2); color: var(--fire); }
+  .bg-owner { background: rgba(232,87,26,0.2); color: var(--fire); }
+  .bg-manager { background: rgba(139,105,20,0.2); color: #D4A843; }
+  .bg-kitchen { background: rgba(61,54,48,0.4); color: var(--cream); }
+  .bg-viewer { background: rgba(44,74,110,0.3); color: #64B5F6; }
+
+  .cat-tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+
+  .section-row td { background: var(--coal); color: var(--fire); font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 2px; padding: 8px 14px; }
+
+  .alert { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; }
+  .alert-amber { background: rgba(232,160,32,0.1); border: 1px solid rgba(232,160,32,0.3); color: var(--amber); }
+  .alert-red { background: rgba(192,57,43,0.1); border: 1px solid rgba(192,57,43,0.3); color: #E57373; }
+
+  .progress-bar { height: 6px; background: var(--smoke); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+  .progress-fill { height: 100%; border-radius: 3px; }
+
+  .fc-good { color: #4CAF50; }
+  .fc-warn { color: var(--amber); }
+  .fc-bad { color: #E57373; }
+
+  .page-title { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 3px; color: var(--cream); margin-bottom: 6px; }
+  .page-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  .tscroll { max-height: 480px; overflow-y: auto; }
+  .tscroll thead th { position: sticky; top: 0; background: var(--coal); z-index: 2; }
+
+  .access-denied { text-align: center; padding: 80px 24px; color: var(--muted); }
+  .access-denied .icon { font-size: 48px; margin-bottom: 16px; }
+  .access-denied h3 { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 2px; color: var(--cream); margin-bottom: 8px; }
+
+  .timeline-item { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--smoke); }
+  .tdot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .tdot.login { background: var(--green); }
+  .tdot.logout { background: var(--muted); }
+  .tdot.purchase { background: var(--fire); }
+  .tdot.flag { background: var(--amber); }
+  .tdot.edit { background: #64B5F6; }
+  .timeline-main { font-size: 13px; color: var(--cream); }
+  .timeline-meta { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: 'DM Mono', monospace; }
+
+  .filter-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+
+  .price-cell { display: flex; align-items: center; gap: 6px; }
+  .price-input { width: 80px; background: var(--coal); border: 1px solid var(--smoke); border-radius: 5px; padding: 5px 8px; color: var(--cream); font-family: 'DM Mono', monospace; font-size: 13px; outline: none; text-align: right; }
+  .price-input:focus { border-color: var(--fire); }
+  .price-edit-btn { background: transparent; border: 1px solid var(--smoke); border-radius: 4px; padding: 4px 7px; color: var(--muted); font-size: 11px; cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+  .price-edit-btn:hover { border-color: var(--fire); color: var(--fire); }
+  .price-modified { color: var(--amber); font-size: 10px; margin-left: 2px; }
+  .fc-input { width: 60px; background: var(--coal); border: 1px solid var(--smoke); border-radius: 5px; padding: 5px 6px; color: var(--cream); font-family: 'DM Mono', monospace; font-size: 13px; outline: none; text-align: right; }
+  .fc-input:focus { border-color: var(--amber); }
+  .edit-divider { width: 1px; height: 28px; background: var(--smoke); margin: 0 4px; }
+
+  @media (max-width: 768px) {
+    .header { padding: 0 16px; }
+    .main { padding: 16px; }
+    .nav { padding: 0 12px; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .cols-4, .cols-5 { grid-template-columns: 1fr 1fr; }
+    .date-display { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="login-screen">
+  <div class="login-logo">THE BRAAI <span>CLUB</span></div>
+  <div class="login-tagline">Cost Control System</div>
+
+  <div class="login-box">
+    <!-- Step 1: Select user -->
+    <div class="login-step active" id="step-select">
+      <div class="ls-title">Who's logging in?</div>
+      <div class="ls-sub">Select your profile to continue</div>
+      <div class="user-grid" id="user-grid"></div>
+      <button class="add-user-btn" onclick="showAddUser()">+ Add New User</button>
+      <div class="add-user-form" id="add-user-form">
+        <div class="form-row cols-2" style="margin-bottom:12px;">
+          <div><label>Full Name</label><input type="text" id="new-name" placeholder="e.g. Lungelo"></div>
+          <div><label>Role</label><select id="new-role"><option value="owner">Owner</option><option value="manager">Manager</option><option value="kitchen" selected>Kitchen Staff</option><option value="viewer">View Only</option></select></div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-fire btn-sm" onclick="createUser()">Create</button>
+          <button class="btn btn-outline btn-sm" onclick="hideAddUser()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Enter PIN -->
+    <div class="login-step" id="step-pin">
+      <div class="ls-title" id="pin-title">Enter PIN</div>
+      <div class="ls-sub" id="pin-sub">Enter your 4-digit PIN</div>
+      <div class="pin-display">
+        <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+        <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+      </div>
+      <div class="pin-pad">
+        <button class="pin-key" onclick="pinPress('1')">1</button><button class="pin-key" onclick="pinPress('2')">2</button><button class="pin-key" onclick="pinPress('3')">3</button>
+        <button class="pin-key" onclick="pinPress('4')">4</button><button class="pin-key" onclick="pinPress('5')">5</button><button class="pin-key" onclick="pinPress('6')">6</button>
+        <button class="pin-key" onclick="pinPress('7')">7</button><button class="pin-key" onclick="pinPress('8')">8</button><button class="pin-key" onclick="pinPress('9')">9</button>
+        <button class="pin-key empty"></button><button class="pin-key" onclick="pinPress('0')">0</button><button class="pin-key del" onclick="pinBack()">⌫</button>
+      </div>
+      <div class="pin-error" id="pin-error"></div>
+      <button class="login-back" onclick="goBack()">← Change user</button>
+    </div>
+
+    <!-- Step 3: Set PIN -->
+    <div class="login-step" id="step-setpin">
+      <div class="ls-title">Set Your PIN</div>
+      <div class="ls-sub" id="setpin-sub">Choose a 4-digit PIN</div>
+      <div class="pin-display">
+        <div class="pin-dot" id="spd0"></div><div class="pin-dot" id="spd1"></div>
+        <div class="pin-dot" id="spd2"></div><div class="pin-dot" id="spd3"></div>
+      </div>
+      <div class="pin-pad">
+        <button class="pin-key" onclick="sPress('1')">1</button><button class="pin-key" onclick="sPress('2')">2</button><button class="pin-key" onclick="sPress('3')">3</button>
+        <button class="pin-key" onclick="sPress('4')">4</button><button class="pin-key" onclick="sPress('5')">5</button><button class="pin-key" onclick="sPress('6')">6</button>
+        <button class="pin-key" onclick="sPress('7')">7</button><button class="pin-key" onclick="sPress('8')">8</button><button class="pin-key" onclick="sPress('9')">9</button>
+        <button class="pin-key empty"></button><button class="pin-key" onclick="sPress('0')">0</button><button class="pin-key del" onclick="sBack()">⌫</button>
+      </div>
+      <div class="pin-error" id="setpin-error"></div>
+      <button class="login-back" onclick="goBack()">← Go back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="app">
+  <div class="header">
+    <div class="logo">THE BRAAI <span>CLUB</span></div>
+    <div class="header-right">
+      <div class="date-display" id="live-date"></div>
+      <div class="user-chip">
+        <div class="chip-av" id="chip-av"></div>
+        <div><div class="chip-name" id="chip-name"></div><div class="chip-role" id="chip-role"></div></div>
+      </div>
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <button class="nav-btn active" id="nav-dashboard" onclick="showPanel('dashboard')">Dashboard</button>
+    <button class="nav-btn" id="nav-purchase" onclick="showPanel('purchase')">Purchase Entry</button>
+    <button class="nav-btn" id="nav-ingredients" onclick="showPanel('ingredients')">Ingredients</button>
+    <button class="nav-btn" id="nav-menu" onclick="showPanel('menu')">Menu Costing</button>
+    <button class="nav-btn" id="nav-stock" onclick="showPanel('stock')">Stock Tracker</button>
+    <button class="nav-btn" id="nav-activity" onclick="showPanel('activity')">Activity Log</button>
+    <button class="nav-btn" id="nav-users" onclick="showPanel('users')">Users</button>
+  </nav>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div id="panel-dashboard" class="panel active">
+      <div class="page-title">OPERATIONS OVERVIEW</div>
+      <div class="page-sub">Live food cost control — The Braai Club</div>
+      <div class="metrics" id="dash-metrics"></div>
+      <div class="grid-2" style="margin-bottom:20px;">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Cost by Category</div>
+          <table><thead><tr><th>Category</th><th>Avg/Portion</th><th>Items</th></tr></thead><tbody id="dash-cats"></tbody></table>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Recent Purchases</div>
+          <div class="tscroll">
+            <table><thead><tr><th>Date</th><th>Ingredient</th><th>Qty</th><th>Amount</th><th>By</th></tr></thead><tbody id="dash-recent"></tbody></table>
+          </div>
+          <div id="dash-no-purch" class="empty-state" style="display:none;"><div class="icon">🧾</div><p>No purchases yet</p></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Menu Performance</div>
+        <div class="tscroll"><table><thead><tr><th>Menu Item</th><th>Sell Price</th><th>Cost</th><th>GP</th><th>GP %</th><th>FC %</th><th>Status</th></tr></thead><tbody id="dash-menu"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- PURCHASE -->
+    <div id="panel-purchase" class="panel">
+      <div class="page-title">PURCHASE ENTRY LOG</div>
+      <div class="page-sub">Log each invoice — costs flow through automatically</div>
+      <div id="purch-denied" style="display:none;"><div class="access-denied"><div class="icon">🔒</div><h3>Access Restricted</h3><p>View-only accounts cannot log purchases.</p></div></div>
+      <div id="purch-wrap">
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-title"><span class="dot"></span>New Purchase</div>
+          <div class="form-row cols-5">
+            <div><label>Date</label><input type="date" id="pur-date"></div>
+            <div><label>Ingredient</label><select id="pur-ing"><option value="">Select...</option></select></div>
+            <div><label>Unit</label><input type="text" id="pur-unit" placeholder="kg, loaf..."></div>
+            <div><label>Qty</label><input type="number" id="pur-qty" placeholder="0.00" min="0" step="0.01"></div>
+            <div><label>Invoice Amount (R)</label><input type="number" id="pur-amt" placeholder="0.00" min="0" step="0.01"></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-fire" onclick="addPurchase()">+ Add Purchase</button>
+            <span id="pur-ok" style="font-size:13px;color:#4CAF50;display:none;">✓ Logged</span>
+            <span id="pur-flag-msg" style="font-size:13px;color:var(--amber);display:none;"></span>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div class="card-title" style="margin-bottom:0;"><span class="dot"></span>Purchase Log</div>
+            <div class="filter-bar" style="margin-bottom:0;">
+              <label style="margin-bottom:0;">Month:</label>
+              <input type="month" id="pur-filter" style="width:160px;" onchange="renderPurchLog()">
+              <button class="btn btn-outline btn-sm" onclick="document.getElementById('pur-filter').value='';renderPurchLog()">All</button>
+            </div>
+          </div>
+          <div class="tscroll">
+            <table><thead><tr><th>Date</th><th>Ingredient</th><th>Unit</th><th>Qty</th><th>Invoice (R)</th><th>Cost/kg</th><th>Portions</th><th>Cost/Portion</th><th>Month</th><th>Logged By</th><th>Time</th><th>Flag</th><th></th></tr></thead>
+            <tbody id="purch-body"></tbody></table>
+          </div>
+          <div id="purch-empty" class="empty-state" style="display:none;"><div class="icon">🧾</div><p>No purchases logged yet.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INGREDIENTS -->
+    <div id="panel-ingredients" class="panel">
+      <div class="page-title">INGREDIENTS MASTER</div>
+      <div class="page-sub">Edit prices & portions — all menu costs auto-update</div>
+      <div id="ing-denied" style="display:none;"><div class="access-denied"><div class="icon">🔒</div><h3>Access Restricted</h3><p>Managers and owners only.</p></div></div>
+      <div id="ing-wrap">
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-title"><span class="dot"></span>Add / Edit Ingredient</div>
+          <div class="form-row cols-4">
+            <div><label>Name</label><input type="text" id="ing-name" placeholder="e.g. Chuck steak"></div>
+            <div><label>Category</label><select id="ing-cat"><option>Protein</option><option>Starch</option><option>Vegetable</option><option>Spice</option><option>Bakery</option><option>Dairy</option><option>Condiment</option><option>Ingredient</option></select></div>
+            <div><label>Purchase Unit</label><input type="text" id="ing-unit" placeholder="kg, liter..."></div>
+            <div><label>Cost per Unit (R)</label><input type="number" id="ing-cost" placeholder="0.00" min="0" step="0.01"></div>
+          </div>
+          <div class="form-row cols-3">
+            <div><label>Std Portion (g/ml)</label><input type="number" id="ing-portion" placeholder="e.g. 200"></div>
+            <div><label>Notes</label><input type="text" id="ing-notes" placeholder="Optional"></div>
+            <div style="display:flex;align-items:flex-end;gap:10px;">
+              <button class="btn btn-fire" onclick="saveIng()">Save</button>
+              <button class="btn btn-outline" id="ing-cancel" onclick="clearIngForm()" style="display:none;">Cancel</button>
+            </div>
+          </div>
+          <input type="hidden" id="ing-idx">
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Ingredients List</div>
+          <div class="tscroll"><table><thead><tr><th>Ingredient</th><th>Category</th><th>Unit</th><th>Cost/Unit</th><th>Cost/kg</th><th>Portion (g)</th><th>Portion Cost</th><th>Source</th><th>Notes</th><th></th></tr></thead><tbody id="ing-body"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MENU -->
+    <div id="panel-menu" class="panel">
+      <div class="page-title">MENU COSTING</div>
+      <div class="page-sub">Live GP & food cost — pulls from Ingredients Master. <span style="color:var(--amber);">✎ Sell prices are editable directly in the table.</span></div>
+      <div class="metrics" id="menu-metrics"></div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+          <div class="card-title" style="margin-bottom:0;"><span class="dot"></span>Menu Breakdown</div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick="resetAllPrices()">↩ Reset Prices</button>
+            <button class="btn btn-fire btn-sm" onclick="exportMenuPDF()" style="display:flex;align-items:center;gap:6px;">⬇ Export Client Menu PDF</button>
+          </div>
+        </div>
+        <div class="tscroll"><table><thead><tr><th>Menu Item</th><th>Sell Price (R) ✎</th><th>Target FC % ✎</th><th>Ingredients</th><th>Total Cost</th><th>GP (R)</th><th>GP %</th><th>Actual FC %</th><th>Status</th></tr></thead><tbody id="menu-body"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- STOCK -->
+    <div id="panel-stock" class="panel">
+      <div class="page-title">MONTHLY STOCK TRACKER</div>
+      <div class="page-sub">Total spend per ingredient by month</div>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap;">
+        <div><label>Month</label><input type="month" id="stock-month" style="width:180px;" onchange="renderStock()"></div>
+        <div style="margin-top:20px;"><button class="btn btn-outline btn-sm" onclick="document.getElementById('stock-month').value='';renderStock()">All Time</button></div>
+        <div id="stock-total" style="margin-top:20px;"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Spend by Ingredient</div>
+        <div class="tscroll"><table><thead><tr><th>Ingredient</th><th>Category</th><th>Total Qty</th><th>Total Spent (R)</th><th>Avg Cost/kg</th><th>Total Portions</th><th>Avg Cost/Portion</th><th># Purchases</th></tr></thead><tbody id="stock-body"></tbody></table></div>
+        <div id="stock-empty" class="empty-state" style="display:none;"><div class="icon">📦</div><p>No purchases for this period.</p></div>
+      </div>
+    </div>
+
+    <!-- ACTIVITY -->
+    <div id="panel-activity" class="panel">
+      <div class="page-title">ACTIVITY LOG</div>
+      <div class="page-sub">Full audit trail — logins, purchases, flags</div>
+      <div id="act-denied" style="display:none;"><div class="access-denied"><div class="icon">🔒</div><h3>Access Restricted</h3><p>Managers and owners only.</p></div></div>
+      <div id="act-wrap">
+        <div class="metrics" id="act-metrics"></div>
+        <div class="grid-2">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <div class="card-title" style="margin-bottom:0;"><span class="dot"></span>Timeline</div>
+              <select id="act-filter" style="width:150px;" onchange="renderTimeline()"><option value="">All Users</option></select>
+            </div>
+            <div class="tscroll" style="max-height:520px;"><div id="act-timeline"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot"></span>⚠️ Flagged Entries</div>
+            <div id="flag-list"></div>
+            <div id="flag-empty" class="empty-state" style="display:none;"><div class="icon">✅</div><p>No flags — all clear.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div id="panel-users" class="panel">
+      <div class="page-title">USER MANAGEMENT</div>
+      <div class="page-sub">Manage team access and PINs</div>
+      <div id="users-denied" style="display:none;"><div class="access-denied"><div class="icon">🔒</div><h3>Access Restricted</h3><p>Owners only.</p></div></div>
+      <div id="users-wrap">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>All Users</div>
+          <table><thead><tr><th>User</th><th>Role</th><th>PIN</th><th>Last Login</th><th>Total Logins</th><th>Purchases</th><th>Actions</th></tr></thead><tbody id="users-body"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ===================== STORAGE =====================
+const SK = 'braai_v3';
+function load() {
+  const r = localStorage.getItem(SK);
+  return r ? JSON.parse(r) : { users: defaultUsers(), purchases: [], ingredients: defaultIngs(), log: [], prices: {} };
+}
+function save() { localStorage.setItem(SK, JSON.stringify(D)); }
+
+let D = load();
+if (!D.prices) D.prices = {};
+
+function getPrice(itemName, defaultPrice) {
+  return D.prices[itemName] !== undefined ? D.prices[itemName] : defaultPrice;
+}
+
+function updatePrice(itemName, newPrice) {
+  if (!can('ing_write')) { alert('Only managers and owners can edit sell prices.'); return; }
+  const val = parseFloat(newPrice);
+  if (isNaN(val) || val <= 0) { alert('Enter a valid price.'); return; }
+  D.prices[itemName] = val;
+  logAct('edit', `Updated sell price: ${itemName} → R${val.toFixed(2)}`);
+  save();
+  renderMenu();
+  renderDashboard();
+}
+
+function resetAllPrices() {
+  if (!can('ing_write')) return;
+  if (!confirm('Reset all sell prices back to original defaults?')) return;
+  D.prices = {};
+  logAct('edit', 'Reset all sell prices to defaults');
+  save();
+  renderMenu();
+  renderDashboard();
+}
+
+// Back-calculate sell price from a target food cost %
+// Formula: Sell Price = Cost / (FC% / 100)
+function updateFromFC(itemName, targetFC) {
+  if (!can('ing_write')) { alert('Only managers and owners can edit pricing.'); return; }
+  const fc = parseFloat(targetFC);
+  if (isNaN(fc) || fc <= 0 || fc >= 100) { alert('Enter a food cost % between 1 and 99.'); return; }
+  // Find the item to get its cost
+  let cost = 0;
+  MENU.forEach(s => s.items.forEach(item => { if (item.name === itemName) cost = itemCost(item); }));
+  if (cost <= 0) return;
+  const newPrice = cost / (fc / 100);
+  D.prices[itemName] = Math.round(newPrice * 2) / 2; // round to nearest R0.50
+  logAct('edit', `Set target FC ${fc}% for ${itemName} → price R${D.prices[itemName].toFixed(2)}`);
+  save();
+  renderMenu();
+  renderDashboard();
+}
+let CU = null; // current user
+let selUser = null;
+let pinBuf = '', setPinBuf = '', setPinFirst = '';
+
+// ===================== DEFAULTS =====================
+function defaultUsers() {
+  return [
+    { id:'u1', name:'Simele', role:'owner', pin:null, lastLogin:null, logins:0 },
+    { id:'u2', name:'Manager', role:'manager', pin:null, lastLogin:null, logins:0 },
+  ];
+}
+
+function defaultIngs() {
+  return [
+    {name:'Chuck steak',cat:'Protein',unit:'kg',cpu:99,pg:200,notes:'Standard steak portion'},
+    {name:'Boerewors',cat:'Protein',unit:'kg',cpu:85,pg:150,notes:'Standard wors portion'},
+    {name:'Chicken portions',cat:'Protein',unit:'kg',cpu:65,pg:250,notes:'Quarter chicken leg'},
+    {name:'Whole chicken',cat:'Protein',unit:'kg',cpu:55,pg:1200,notes:'Full chicken for Board 4'},
+    {name:'Pork chops',cat:'Protein',unit:'kg',cpu:89,pg:180,notes:'Standard pork chop'},
+    {name:'Lamb chops',cat:'Protein',unit:'kg',cpu:280,pg:150,notes:'Lamb chop portion'},
+    {name:'Beef stew meat',cat:'Protein',unit:'kg',cpu:160,pg:250,notes:'Single stew portion'},
+    {name:'Tripe (Mogodu)',cat:'Protein',unit:'kg',cpu:95,pg:300,notes:'Single mogodu portion'},
+    {name:'Chicken feet (Amangqina)',cat:'Protein',unit:'kg',cpu:85,pg:300,notes:'Single amangqina portion'},
+    {name:'Hardbody chicken',cat:'Protein',unit:'kg',cpu:110,pg:350,notes:'Single hardbody portion'},
+    {name:'Maize meal (Pap)',cat:'Starch',unit:'kg',cpu:18,pg:250,notes:'Standard pap portion'},
+    {name:'Dombolo mix',cat:'Starch',unit:'kg',cpu:22,pg:150,notes:'Dumpling portion'},
+    {name:'Potatoes (Chips)',cat:'Starch',unit:'kg',cpu:25,pg:200,notes:'Standard chips portion'},
+    {name:'Chakalaka mix',cat:'Vegetable',unit:'kg',cpu:35,pg:150,notes:'Standard side portion'},
+    {name:'Cabbage (Coleslaw)',cat:'Vegetable',unit:'kg',cpu:15,pg:150,notes:'Coleslaw portion'},
+    {name:'Spinach/Morogo',cat:'Vegetable',unit:'kg',cpu:28,pg:150,notes:'Spinach portion'},
+    {name:'Tomato relish (Shatini)',cat:'Vegetable',unit:'kg',cpu:32,pg:150,notes:'Shatini portion'},
+    {name:'Mixed vegetables',cat:'Vegetable',unit:'kg',cpu:30,pg:180,notes:'Veg for stews'},
+    {name:'Gravy powder',cat:'Ingredient',unit:'kg',cpu:45,pg:30,notes:'Gravy per portion'},
+    {name:'Spice mix',cat:'Spice',unit:'kg',cpu:120,pg:20,notes:'Spice per portion'},
+    {name:'Marinade base',cat:'Spice',unit:'liter',cpu:85,pg:50,notes:'Marinade per portion (ml)'},
+    {name:'White bread loaf',cat:'Bakery',unit:'loaf',cpu:18,pg:null,notes:'Per loaf - use quarters'},
+    {name:'Polony',cat:'Protein',unit:'kg',cpu:65,pg:100,notes:'Polony for kota'},
+    {name:'Russian sausage',cat:'Protein',unit:'kg',cpu:95,pg:100,notes:'Russian for kota'},
+    {name:'Cheddar cheese',cat:'Dairy',unit:'kg',cpu:110,pg:50,notes:'Cheese for kota'},
+    {name:'Eggs',cat:'Dairy',unit:'dozen',cpu:45,pg:null,notes:'Per dozen'},
+    {name:'Atchar',cat:'Condiment',unit:'kg',cpu:55,pg:30,notes:'Atchar portion'},
+    {name:'Lettuce',cat:'Vegetable',unit:'head',cpu:12,pg:null,notes:'Per head'},
+    {name:'Tomatoes',cat:'Vegetable',unit:'kg',cpu:18,pg:50,notes:'Tomato portion'},
+  ];
+}
+
+// ===================== MENU =====================
+const MENU = [
+  {sec:'VALUE FROM THE FIRE', items:[
+    {name:'Chuck Steak & Pap',price:80,ings:[{n:'Chuck steak',q:1},{n:'Maize meal (Pap)',q:1},{n:'Chakalaka mix',q:1}]},
+    {name:'Wors & Pap',price:49,ings:[{n:'Boerewors',q:1},{n:'Maize meal (Pap)',q:1},{n:'Chakalaka mix',q:1}]},
+    {name:'Quarter Leg Chicken & Pap',price:65,ings:[{n:'Chicken portions',q:1},{n:'Maize meal (Pap)',q:1},{n:'Chakalaka mix',q:1}]},
+    {name:'Pork Chop & Pap',price:60,ings:[{n:'Pork chops',q:1},{n:'Maize meal (Pap)',q:1},{n:'Chakalaka mix',q:1}]},
+  ]},
+  {sec:'THE POT & THE FIRE', items:[
+    {name:'Beef Stew - Single',price:120,ings:[{n:'Beef stew meat',q:1},{n:'Mixed vegetables',q:1},{n:'Gravy powder',q:1},{n:'Maize meal (Pap)',q:1},{n:'Chakalaka mix',q:1}]},
+    {name:'Beef Stew - Family',price:420,ings:[{n:'Beef stew meat',q:4},{n:'Mixed vegetables',q:3.33},{n:'Gravy powder',q:3.33},{n:'Maize meal (Pap)',q:4},{n:'Chakalaka mix',q:3.33}]},
+    {name:'Mogodu - Single',price:110,ings:[{n:'Tripe (Mogodu)',q:1},{n:'Mixed vegetables',q:0.83},{n:'Gravy powder',q:1},{n:'Maize meal (Pap)',q:1},{n:'Chakalaka mix',q:1}]},
+    {name:'Mogodu - Family',price:400,ings:[{n:'Tripe (Mogodu)',q:4},{n:'Mixed vegetables',q:2.78},{n:'Gravy powder',q:3.33},{n:'Maize meal (Pap)',q:4},{n:'Chakalaka mix',q:3.33}]},
+    {name:'Amangqina - Single',price:110,ings:[{n:'Chicken feet (Amangqina)',q:1},{n:'Mixed vegetables',q:0.83},{n:'Gravy powder',q:1},{n:'Maize meal (Pap)',q:1},{n:'Chakalaka mix',q:1}]},
+    {name:'Amangqina - Family',price:400,ings:[{n:'Chicken feet (Amangqina)',q:4},{n:'Mixed vegetables',q:2.78},{n:'Gravy powder',q:3.33},{n:'Maize meal (Pap)',q:4},{n:'Chakalaka mix',q:3.33}]},
+    {name:'Hardbody Chicken - Single',price:135,ings:[{n:'Hardbody chicken',q:1},{n:'Spice mix',q:1},{n:'Marinade base',q:1},{n:'Maize meal (Pap)',q:1},{n:'Chakalaka mix',q:1}]},
+    {name:'Hardbody Chicken - Family',price:450,ings:[{n:'Hardbody chicken',q:4.29},{n:'Spice mix',q:4},{n:'Marinade base',q:4},{n:'Maize meal (Pap)',q:4},{n:'Chakalaka mix',q:3.33}]},
+    {name:'The Umuzi Feast',price:650,ings:[{n:'Beef stew meat',q:1.2},{n:'Tripe (Mogodu)',q:1},{n:'Chicken feet (Amangqina)',q:1},{n:'Hardbody chicken',q:1.14},{n:'Mixed vegetables',q:2.22},{n:'Gravy powder',q:2.67},{n:'Maize meal (Pap)',q:4},{n:'Chakalaka mix',q:4}]},
+  ]},
+  {sec:'THE BRAAI BOARDS', items:[
+    {name:'Board 1',price:195,ings:[{n:'Chicken portions',q:1},{n:'Chuck steak',q:1},{n:'Boerewors',q:0.67},{n:'Maize meal (Pap)',q:1.2},{n:'Chakalaka mix',q:1}]},
+    {name:'Board 2',price:185,ings:[{n:'Chicken portions',q:1},{n:'Pork chops',q:1},{n:'Boerewors',q:0.67},{n:'Maize meal (Pap)',q:1.2},{n:'Chakalaka mix',q:1}]},
+    {name:'Board 3',price:145,ings:[{n:'Chuck steak',q:1},{n:'Boerewors',q:1},{n:'Maize meal (Pap)',q:1.2},{n:'Chakalaka mix',q:1}]},
+    {name:'Board 4 - Half Chicken',price:125,ings:[{n:'Chicken portions',q:2},{n:'Maize meal (Pap)',q:1.2},{n:'Chakalaka mix',q:1}]},
+    {name:'Board 4 - Full Chicken',price:199,ings:[{n:'Whole chicken',q:1},{n:'Maize meal (Pap)',q:2},{n:'Chakalaka mix',q:2}]},
+    {name:'Board 5',price:210,ings:[{n:'Chicken portions',q:1},{n:'Lamb chops',q:1},{n:'Boerewors',q:0.67},{n:'Maize meal (Pap)',q:1.2},{n:'Chakalaka mix',q:1}]},
+  ]},
+  {sec:'FAMILY BRAAI PLATTERS', items:[
+    {name:'Platter for 4',price:650,ings:[{n:'Chicken portions',q:2},{n:'Chuck steak',q:2},{n:'Boerewors',q:2.67},{n:'Maize meal (Pap)',q:4},{n:'Chakalaka mix',q:4}]},
+    {name:'Platter for 6',price:950,ings:[{n:'Chicken portions',q:3},{n:'Chuck steak',q:3},{n:'Boerewors',q:4},{n:'Pork chops',q:2},{n:'Maize meal (Pap)',q:6},{n:'Chakalaka mix',q:6}]},
+    {name:'Platter for 8',price:1250,ings:[{n:'Chicken portions',q:4},{n:'Chuck steak',q:4},{n:'Boerewors',q:5.33},{n:'Pork chops',q:4},{n:'Lamb chops',q:2},{n:'Maize meal (Pap)',q:8},{n:'Chakalaka mix',q:8}]},
+  ]},
+  {sec:'STREET FIRE CLASSICS', items:[
+    {name:'Kota Classic',price:85,ings:[{n:'White bread loaf',q:1},{n:'Polony',q:1},{n:'Cheddar cheese',q:1},{n:'Potatoes (Chips)',q:0.75},{n:'Atchar',q:1}]},
+    {name:'Kota Deluxe',price:135,ings:[{n:'White bread loaf',q:1},{n:'Russian sausage',q:1},{n:'Cheddar cheese',q:1.6},{n:'Potatoes (Chips)',q:1},{n:'Eggs',q:1},{n:'Atchar',q:1},{n:'Lettuce',q:1},{n:'Tomatoes',q:1}]},
+  ]},
+];
+
+// ===================== ROLE CONFIG =====================
+const RL = { owner:'Owner', manager:'Manager', kitchen:'Kitchen Staff', viewer:'View Only' };
+const AV = { owner:'av-owner', manager:'av-manager', kitchen:'av-kitchen', viewer:'av-viewer' };
+const RB = { owner:'bg-owner', manager:'bg-manager', kitchen:'bg-kitchen', viewer:'bg-viewer' };
+
+function can(f) {
+  if (!CU) return false;
+  const p = {
+    purch_write: ['owner','manager','kitchen'],
+    ing_write: ['owner','manager'],
+    activity: ['owner','manager'],
+    users: ['owner'],
+  };
+  return (p[f]||['owner','manager','kitchen','viewer']).includes(CU.role);
+}
+
+function initials(n) { return n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+
+// ===================== ACTIVITY =====================
+function logAct(type, detail, extra={}) {
+  D.log.push({ id: Date.now()+Math.random(), type, uid: CU?.id, uname: CU?.name||'System', urole: CU?.role||'', ts: new Date().toISOString(), detail, ...extra });
+  save();
+}
+
+function checkFlag(ing, amt) {
+  const now = Date.now();
+  const recent = D.purchases.filter(p => p.uid === CU.id && p.ing === ing && new Date(p.ts).getTime() > now - 3600000);
+  if (recent.length >= 3) return `⚠️ ${CU.name} has logged ${ing} ${recent.length+1}× in the last hour`;
+  const all = D.purchases.filter(p => p.ing === ing && p.amt > 0);
+  if (all.length >= 3) {
+    const avg = all.reduce((s,p)=>s+p.amt,0)/all.length;
+    if (amt > avg * 3) return `⚠️ R${amt.toFixed(2)} is unusually high for ${ing} (avg R${avg.toFixed(2)})`;
+  }
+  return null;
+}
+
+// ===================== LOGIN =====================
+function renderUserGrid() {
+  document.getElementById('user-grid').innerHTML = D.users.map(u => `
+    <div class="user-card" onclick="selectUser('${u.id}')">
+      <div class="avatar ${AV[u.role]}">${initials(u.name)}</div>
+      <div class="uname">${u.name}</div>
+      <div class="urole">${RL[u.role]}</div>
+      ${!u.pin ? '<div class="usetup">Tap to set PIN</div>' : ''}
+    </div>`).join('');
+}
+
+function showAddUser() { document.getElementById('add-user-form').classList.add('show'); }
+function hideAddUser() { document.getElementById('add-user-form').classList.remove('show'); document.getElementById('new-name').value=''; }
+
+function createUser() {
+  const name = document.getElementById('new-name').value.trim();
+  const role = document.getElementById('new-role').value;
+  if (!name) { alert('Enter a name.'); return; }
+  if (D.users.find(u => u.name.toLowerCase() === name.toLowerCase())) { alert('User already exists.'); return; }
+  D.users.push({ id:'u'+Date.now(), name, role, pin:null, lastLogin:null, logins:0 });
+  save(); hideAddUser(); renderUserGrid();
+}
+
+function selectUser(uid) {
+  selUser = D.users.find(u => u.id === uid);
+  if (!selUser) return;
+  pinBuf = '';
+  document.getElementById('pin-error').textContent = '';
+  updatePinDots();
+  if (!selUser.pin) {
+    setPinBuf = ''; setPinFirst = '';
+    document.getElementById('setpin-sub').textContent = `Choose a 4-digit PIN, ${selUser.name}`;
+    document.getElementById('setpin-error').textContent = '';
+    updateSetDots();
+    showStep('step-setpin');
+  } else {
+    document.getElementById('pin-title').textContent = `Welcome back, ${selUser.name}`;
+    document.getElementById('pin-sub').textContent = 'Enter your 4-digit PIN';
+    showStep('step-pin');
+  }
+}
+
+function showStep(id) {
+  document.querySelectorAll('.login-step').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goBack() { pinBuf=''; setPinBuf=''; setPinFirst=''; selUser=null; updatePinDots(); showStep('step-select'); }
+
+function pinPress(d) {
+  if (pinBuf.length >= 4) return;
+  pinBuf += d; updatePinDots();
+  if (pinBuf.length === 4) setTimeout(validatePin, 100);
+}
+function pinBack() { pinBuf = pinBuf.slice(0,-1); updatePinDots(); document.getElementById('pin-error').textContent=''; }
+function updatePinDots() {
+  for (let i=0;i<4;i++) { const dot=document.getElementById('pd'+i); dot.classList.toggle('filled', i<pinBuf.length); dot.classList.remove('error'); }
+}
+function validatePin() {
+  if (pinBuf === selUser.pin) { doLogin(); return; }
+  for (let i=0;i<4;i++) document.getElementById('pd'+i).classList.add('error');
+  document.getElementById('pin-error').textContent = 'Incorrect PIN. Try again.';
+  setTimeout(() => { pinBuf=''; updatePinDots(); }, 800);
+}
+
+function sPress(d) {
+  if (setPinBuf.length >= 4) return;
+  setPinBuf += d; updateSetDots();
+  if (setPinBuf.length === 4) {
+    setTimeout(() => {
+      if (!setPinFirst) {
+        setPinFirst = setPinBuf; setPinBuf = '';
+        updateSetDots();
+        document.getElementById('setpin-sub').textContent = 'Confirm your PIN';
+        document.getElementById('setpin-error').textContent = '';
+      } else {
+        if (setPinBuf === setPinFirst) { selUser.pin = setPinBuf; save(); doLogin(); }
+        else {
+          document.getElementById('setpin-error').textContent = "PINs don't match. Try again.";
+          setPinBuf=''; setPinFirst=''; updateSetDots();
+          document.getElementById('setpin-sub').textContent = `Choose a 4-digit PIN, ${selUser.name}`;
+        }
+      }
+    }, 100);
+  }
+}
+function sBack() { setPinBuf = setPinBuf.slice(0,-1); updateSetDots(); }
+function updateSetDots() {
+  for (let i=0;i<4;i++) document.getElementById('spd'+i).classList.toggle('filled', i<setPinBuf.length);
+}
+
+function doLogin() {
+  CU = selUser;
+  CU.lastLogin = new Date().toISOString();
+  CU.logins = (CU.logins||0) + 1;
+  save();
+  logAct('login', `${CU.name} signed in`);
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+  updateHeader();
+  setupNav();
+  document.getElementById('pur-date').value = new Date().toISOString().split('T')[0];
+  populateIngDrop();
+  renderDashboard();
+}
+
+function logout() {
+  logAct('logout', `${CU.name} signed out`);
+  CU = null; selUser = null; pinBuf = '';
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login-screen').classList.remove('hidden');
+  showStep('step-select');
+  renderUserGrid();
+}
+
+// ===================== HEADER & NAV =====================
+function updateHeader() {
+  const now = new Date();
+  document.getElementById('live-date').textContent = now.toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short',year:'numeric'}).toUpperCase();
+  document.getElementById('chip-av').className = `chip-av ${AV[CU.role]}`;
+  document.getElementById('chip-av').textContent = initials(CU.name);
+  document.getElementById('chip-name').textContent = CU.name;
+  document.getElementById('chip-role').textContent = RL[CU.role];
+}
+
+function setupNav() {
+  const locked = {
+    kitchen: ['nav-activity','nav-users','nav-ingredients'],
+    viewer: ['nav-activity','nav-users','nav-ingredients','nav-purchase'],
+  };
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('locked'));
+  (locked[CU.role]||[]).forEach(id => { const b=document.getElementById(id); if(b) b.classList.add('locked'); });
+}
+
+// ===================== PANEL NAV =====================
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  const nb = document.getElementById('nav-'+name);
+  if (nb) nb.classList.add('active');
+  const renders = {
+    dashboard: renderDashboard,
+    purchase: renderPurchPanel,
+    ingredients: renderIngPanel,
+    menu: renderMenu,
+    stock: renderStock,
+    activity: renderActivity,
+    users: renderUsers,
+  };
+  if (renders[name]) renders[name]();
+}
+
+// ===================== PURCHASE =====================
+function renderPurchPanel() {
+  const ok = CU.role !== 'viewer';
+  document.getElementById('purch-denied').style.display = ok ? 'none' : 'block';
+  document.getElementById('purch-wrap').style.display = ok ? 'block' : 'none';
+  renderPurchLog();
+}
+
+function populateIngDrop() {
+  const s = document.getElementById('pur-ing');
+  const v = s.value;
+  s.innerHTML = '<option value="">Select...</option>';
+  D.ingredients.forEach(i => { const o=document.createElement('option'); o.value=i.name; o.textContent=i.name; s.appendChild(o); });
+  s.value = v;
+}
+
+function addPurchase() {
+  if (!can('purch_write')) return;
+  const date = document.getElementById('pur-date').value;
+  const ing = document.getElementById('pur-ing').value;
+  const unit = document.getElementById('pur-unit').value.trim();
+  const qty = parseFloat(document.getElementById('pur-qty').value)||0;
+  const amt = parseFloat(document.getElementById('pur-amt').value)||0;
+  if (!date||!ing||qty<=0||amt<=0) { alert('Fill in all fields.'); return; }
+
+  const ingObj = D.ingredients.find(i=>i.name===ing);
+  const cpu = amt/qty;
+  const pg = ingObj?.pg||100;
+  const portions = (ingObj?.unit==='kg'&&pg) ? qty*1000/pg : qty;
+  const cpp = portions>0 ? amt/portions : 0;
+  const month = date.slice(0,7);
+  const ts = new Date().toISOString();
+  const flag = checkFlag(ing, amt);
+
+  D.purchases.push({ date, ing, unit: unit||(ingObj?.unit||''), qty, amt, cpu, pg, portions, cpp, month, uid: CU.id, uname: CU.name, urole: CU.role, ts, flagged: !!flag, flagReason: flag||null });
+  logAct('purchase', `Logged ${qty} ${unit||''} ${ing} — R${amt.toFixed(2)}`, {ing, amt, flagged:!!flag});
+  if (flag) logAct('flag', flag, {ing, amt});
+  save();
+
+  ['pur-qty','pur-amt','pur-unit'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('pur-ing').value='';
+
+  const ok = document.getElementById('pur-ok');
+  ok.style.display='inline'; setTimeout(()=>{ok.style.display='none';},2000);
+
+  if (flag) {
+    const fm = document.getElementById('pur-flag-msg');
+    fm.textContent = flag; fm.style.display='inline';
+    setTimeout(()=>{fm.style.display='none';},5000);
+  }
+  renderPurchLog();
+}
+
+function delPurch(i) {
+  if (!can('ing_write')) return;
+  if (!confirm('Delete this entry?')) return;
+  logAct('delete', `Deleted: ${D.purchases[i].ing} R${D.purchases[i].amt}`);
+  D.purchases.splice(i,1); save(); renderPurchLog();
+}
+
+function renderPurchLog() {
+  const fm = document.getElementById('pur-filter').value;
+  const allIdx = D.purchases.map((p,i)=>({...p,oi:i})).reverse();
+  const list = fm ? allIdx.filter(p=>p.month===fm) : allIdx;
+  const body = document.getElementById('purch-body');
+  const empty = document.getElementById('purch-empty');
+  if (!list.length) { body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  const canDel = can('ing_write');
+  body.innerHTML = list.map(p => `
+    <tr ${p.flagged?'style="background:rgba(232,160,32,0.05);"':''}>
+      <td>${p.date}</td><td><strong>${p.ing}</strong></td><td class="mono">${p.unit}</td>
+      <td class="mono">${p.qty}</td><td class="mono">R${p.amt.toFixed(2)}</td>
+      <td class="mono">R${p.cpu.toFixed(2)}</td>
+      <td class="mono">${p.portions?p.portions.toFixed(1):'—'}</td>
+      <td class="mono">${p.cpp?'R'+p.cpp.toFixed(2):'—'}</td>
+      <td><span class="badge bg-blue">${p.month}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="${AV[p.urole]||'av-kitchen'}" style="width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:9px;">${initials(p.uname||'?')}</div>
+          <span style="font-size:12px;">${p.uname||'—'}</span>
+        </div>
+      </td>
+      <td class="mono" style="font-size:11px;color:var(--muted);">${p.ts?new Date(p.ts).toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'}):'—'}</td>
+      <td>${p.flagged?`<span title="${p.flagReason}" style="color:var(--amber);">⚠️</span>`:''}</td>
+      <td>${canDel?`<button class="btn-ghost" onclick="delPurch(${p.oi})">✕</button>`:''}</td>
+    </tr>`).join('');
+}
+
+// ===================== INGREDIENTS =====================
+function renderIngPanel() {
+  const ok = can('ing_write');
+  document.getElementById('ing-denied').style.display = ok?'none':'block';
+  document.getElementById('ing-wrap').style.display = ok?'block':'none';
+  if (ok) renderIngs();
+}
+
+function renderIngs() {
+  document.getElementById('ing-body').innerHTML = D.ingredients.map((ing,i) => {
+    const ec = effCPU(ing.name);
+    const cpk = ing.unit==='kg'?ec:null;
+    const pc = ing.pg&&ing.unit==='kg' ? ec*(ing.pg/1000) : ing.unit==='dozen' ? ec/12 : ec/4;
+    const live = D.purchases.some(p=>p.ing===ing.name);
+    return `<tr>
+      <td><strong>${ing.name}</strong></td><td><span class="cat-tag">${ing.cat}</span></td><td class="mono">${ing.unit}</td>
+      <td class="mono ${live?'fc-good':''}">R${ec.toFixed(2)}</td>
+      <td class="mono">${cpk?'R'+cpk.toFixed(2):'—'}</td>
+      <td class="mono">${ing.pg||'—'}</td>
+      <td class="mono">R${pc.toFixed(2)}</td>
+      <td>${live?'<span class="badge bg-green">Live</span>':'<span class="badge bg-amber">Default</span>'}</td>
+      <td style="font-size:12px;color:var(--muted);">${ing.notes||''}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="editIng(${i})">Edit</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function editIng(i) {
+  const ing = D.ingredients[i];
+  document.getElementById('ing-name').value=ing.name;
+  document.getElementById('ing-cat').value=ing.cat;
+  document.getElementById('ing-unit').value=ing.unit;
+  document.getElementById('ing-cost').value=ing.cpu;
+  document.getElementById('ing-portion').value=ing.pg||'';
+  document.getElementById('ing-notes').value=ing.notes||'';
+  document.getElementById('ing-idx').value=i;
+  document.getElementById('ing-cancel').style.display='inline-block';
+  document.getElementById('ing-name').scrollIntoView({behavior:'smooth'});
+}
+
+function saveIng() {
+  if (!can('ing_write')) return;
+  const name=document.getElementById('ing-name').value.trim();
+  const cat=document.getElementById('ing-cat').value;
+  const unit=document.getElementById('ing-unit').value.trim();
+  const cpu=parseFloat(document.getElementById('ing-cost').value)||0;
+  const pg=parseFloat(document.getElementById('ing-portion').value)||null;
+  const notes=document.getElementById('ing-notes').value.trim();
+  const idx=document.getElementById('ing-idx').value;
+  if (!name||!unit||cpu<=0) { alert('Enter name, unit, and cost.'); return; }
+  if (idx!=='') { D.ingredients[parseInt(idx)]={name,cat,unit,cpu,pg,notes}; logAct('edit',`Updated: ${name}`); }
+  else {
+    if (D.ingredients.find(i=>i.name.toLowerCase()===name.toLowerCase())) { alert('Already exists.'); return; }
+    D.ingredients.push({name,cat,unit,cpu,pg,notes}); logAct('edit',`Added: ${name}`);
+  }
+  save(); clearIngForm(); renderIngs(); populateIngDrop();
+}
+
+function clearIngForm() {
+  ['ing-name','ing-unit','ing-cost','ing-portion','ing-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ing-cat').value='Protein';
+  document.getElementById('ing-idx').value='';
+  document.getElementById('ing-cancel').style.display='none';
+}
+
+// ===================== MENU =====================
+function renderMenu() {
+  let rows='', allFC=[], allGP=[];
+  const canEdit = can('ing_write');
+  MENU.forEach(s => {
+    rows += `<tr class="section-row"><td colspan="9">${s.sec}</td></tr>`;
+    s.items.forEach(item => {
+      const price = getPrice(item.name, item.price);
+      const cost = itemCost(item);
+      const gp = price-cost;
+      const gpPct = (gp/price)*100;
+      const fcPct = (cost/price)*100;
+      allFC.push(fcPct); allGP.push(gpPct);
+      const st = fcSt(fcPct);
+      const modified = D.prices[item.name] !== undefined && D.prices[item.name] !== item.price;
+      const safeItemName = item.name.replace(/'/g, "\\'");
+      const fcCls = fcPct<=35?'good':fcPct<=40?'warn':'bad';
+      const disAttr = canEdit ? '' : 'disabled';
+      const disStyle = !canEdit ? 'opacity:0.6;cursor:not-allowed;' : 'cursor:text;';
+      rows += `<tr>
+        <td><strong>${item.name}</strong></td>
+        <td>
+          <div class="price-cell">
+            <span style="color:var(--muted);font-size:12px;">R</span>
+            <input class="price-input" type="number" min="0" step="0.5"
+              value="${price.toFixed(2)}" ${disAttr}
+              onchange="updatePrice('${safeItemName}', this.value)"
+              title="${canEdit ? 'Edit sell price' : 'Manager/Owner only'}"
+              style="${disStyle}">
+            ${modified ? `<span class="price-modified" title="Modified from default R${item.price.toFixed(2)}">✎</span>` : ''}
+          </div>
+        </td>
+        <td>
+          <div class="price-cell">
+            <input class="fc-input ${fcCls}" type="number" min="1" max="99" step="0.5"
+              value="${fcPct.toFixed(1)}" ${disAttr}
+              onchange="updateFromFC('${safeItemName}', this.value)"
+              title="${canEdit ? 'Set target food cost % — price will auto-calculate' : 'Manager/Owner only'}"
+              style="${disStyle}">
+            <span style="color:var(--muted);font-size:12px;">%</span>
+          </div>
+        </td>
+        <td style="font-size:11px;color:var(--muted);max-width:200px;">${item.ings.map(l=>`${l.n}×${l.q}`).join(', ')}</td>
+        <td class="mono">R${cost.toFixed(2)}</td>
+        <td class="mono fc-good">R${gp.toFixed(2)}</td>
+        <td class="mono">${gpPct.toFixed(1)}%</td>
+        <td class="mono ${fcPct<=35?'fc-good':fcPct<=40?'fc-warn':'fc-bad'}">${fcPct.toFixed(1)}%</td>
+        <td><span class="badge ${st.cls}">${st.lbl}</span></td>
+      </tr>`;
+    });
+  });
+  document.getElementById('menu-body').innerHTML = rows;
+
+  const aFC = allFC.reduce((a,b)=>a+b,0)/allFC.length;
+  const aGP = allGP.reduce((a,b)=>a+b,0)/allGP.length;
+  const over = allFC.filter(f=>f>40).length;
+  const onT = allFC.filter(f=>f<=35).length;
+  document.getElementById('menu-metrics').innerHTML = `
+    <div class="metric ${aFC<=35?'green':aFC<=40?'amber':'red'}"><div class="metric-label">Avg Food Cost %</div><div class="metric-value">${aFC.toFixed(1)}%</div><div class="metric-sub">Target ≤40%</div><div class="progress-bar"><div class="progress-fill" style="width:${Math.min(aFC,100)}%;background:${aFC<=35?'var(--green)':aFC<=40?'var(--amber)':'var(--red)'}"></div></div></div>
+    <div class="metric green"><div class="metric-label">Avg GP %</div><div class="metric-value">${aGP.toFixed(1)}%</div></div>
+    <div class="metric green"><div class="metric-label">On Target</div><div class="metric-value">${onT}</div><div class="metric-sub">Items ≤35% FC</div></div>
+    <div class="metric ${over>0?'red':'green'}"><div class="metric-label">Over Budget</div><div class="metric-value">${over}</div><div class="metric-sub">&gt;40% FC</div></div>
+    <div class="metric"><div class="metric-label">Total Items</div><div class="metric-value">${allFC.length}</div></div>
+  `;
+}
+
+// ===================== STOCK =====================
+function renderStock() {
+  const fm = document.getElementById('stock-month').value;
+  const list = fm ? D.purchases.filter(p=>p.month===fm) : D.purchases;
+  const map = {};
+  list.forEach(p => {
+    if (!map[p.ing]) map[p.ing]={qty:0,spent:0,portions:0,count:0};
+    map[p.ing].qty+=p.qty; map[p.ing].spent+=p.amt;
+    map[p.ing].portions+=p.portions||0; map[p.ing].count++;
+  });
+  const body = document.getElementById('stock-body');
+  const empty = document.getElementById('stock-empty');
+  const rows = D.ingredients.filter(i=>map[i.name]).map(ing => {
+    const d=map[ing.name];
+    return `<tr>
+      <td><strong>${ing.name}</strong></td><td><span class="cat-tag">${ing.cat}</span></td>
+      <td class="mono">${d.qty.toFixed(2)}</td><td class="mono">R${d.spent.toFixed(2)}</td>
+      <td class="mono">R${(d.qty>0?d.spent/d.qty:0).toFixed(2)}</td>
+      <td class="mono">${d.portions.toFixed(1)}</td>
+      <td class="mono">${d.portions>0?'R'+(d.spent/d.portions).toFixed(2):'—'}</td>
+      <td class="mono">${d.count}</td>
+    </tr>`;
+  });
+  if (!rows.length) { body.innerHTML=''; empty.style.display='block'; document.getElementById('stock-total').innerHTML=''; return; }
+  empty.style.display='none'; body.innerHTML=rows.join('');
+  const tot = Object.values(map).reduce((s,d)=>s+d.spent,0);
+  document.getElementById('stock-total').innerHTML = `<div style="background:var(--ash);border:1px solid var(--smoke);border-radius:6px;padding:10px 20px;display:inline-block;"><div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);">Total Spend</div><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--fire);">R${tot.toFixed(2)}</div></div>`;
+}
+
+// ===================== ACTIVITY =====================
+function renderActivity() {
+  if (!can('activity')) {
+    document.getElementById('act-denied').style.display='block';
+    document.getElementById('act-wrap').style.display='none'; return;
+  }
+  document.getElementById('act-denied').style.display='none';
+  document.getElementById('act-wrap').style.display='block';
+
+  const s = document.getElementById('act-filter');
+  const cur = s.value;
+  s.innerHTML='<option value="">All Users</option>';
+  D.users.forEach(u=>{const o=document.createElement('option');o.value=u.id;o.textContent=u.name;s.appendChild(o);});
+  s.value=cur;
+
+  const logins = D.log.filter(l=>l.type==='login').length;
+  const purches = D.log.filter(l=>l.type==='purchase').length;
+  const flags = D.log.filter(l=>l.type==='flag').length;
+  const today = new Date().toISOString().slice(0,10);
+  const todayUsers = new Set(D.log.filter(l=>l.type==='login'&&l.ts?.startsWith(today)).map(l=>l.uid)).size;
+
+  document.getElementById('act-metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Total Logins</div><div class="metric-value">${logins}</div></div>
+    <div class="metric"><div class="metric-label">Purchases Logged</div><div class="metric-value">${purches}</div></div>
+    <div class="metric ${flags>0?'amber':'green'}"><div class="metric-label">Flagged Entries</div><div class="metric-value">${flags}</div><div class="metric-sub">${flags>0?'Review':'All clear'}</div></div>
+    <div class="metric"><div class="metric-label">Active Today</div><div class="metric-value">${todayUsers}</div><div class="metric-sub">Unique users</div></div>
+  `;
+  renderTimeline();
+  renderFlags();
+}
+
+function renderTimeline() {
+  const fu = document.getElementById('act-filter').value;
+  let log = [...D.log].reverse();
+  if (fu) log = log.filter(l=>l.uid===fu);
+  const icons = {login:'login',logout:'logout',purchase:'purchase',flag:'flag',edit:'edit',delete:'logout'};
+  const labels = {login:'Signed In',logout:'Signed Out',purchase:'Purchase Logged',flag:'⚠️ Flagged',edit:'Edit Made',delete:'Entry Deleted'};
+  const html = log.slice(0,100).map(l => `
+    <div class="timeline-item">
+      <div class="tdot ${icons[l.type]||'purchase'}"></div>
+      <div>
+        <div class="timeline-main">
+          <strong>${l.uname}</strong>
+          <span class="badge ${RB[l.urole]||''}" style="margin-left:5px;font-size:10px;">${RL[l.urole]||''}</span>
+          — ${labels[l.type]||l.type}
+        </div>
+        <div class="timeline-meta">${l.detail} · ${l.ts?new Date(l.ts).toLocaleString('en-ZA'):''}</div>
+      </div>
+    </div>`).join('');
+  document.getElementById('act-timeline').innerHTML = html || '<div class="empty-state"><div class="icon">📋</div><p>No activity yet.</p></div>';
+}
+
+function renderFlags() {
+  const flags = D.log.filter(l=>l.type==='flag').reverse();
+  const el = document.getElementById('flag-list');
+  const em = document.getElementById('flag-empty');
+  if (!flags.length) { el.innerHTML=''; em.style.display='block'; return; }
+  em.style.display='none';
+  el.innerHTML = flags.map(l => `
+    <div class="alert alert-amber" style="margin-bottom:10px;">
+      <div><strong>${l.uname}</strong> · <span style="font-size:11px;font-family:'DM Mono',monospace;">${new Date(l.ts).toLocaleString('en-ZA')}</span><br><span style="font-size:12px;">${l.detail}</span></div>
+    </div>`).join('');
+}
+
+// ===================== USERS =====================
+function renderUsers() {
+  if (!can('users')) {
+    document.getElementById('users-denied').style.display='block';
+    document.getElementById('users-wrap').style.display='none'; return;
+  }
+  document.getElementById('users-denied').style.display='none';
+  document.getElementById('users-wrap').style.display='block';
+  document.getElementById('users-body').innerHTML = D.users.map((u,i) => `
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="avatar ${AV[u.role]}" style="width:34px;height:34px;font-size:14px;flex-shrink:0;">${initials(u.name)}</div>
+          <strong>${u.name}</strong>
+        </div>
+      </td>
+      <td><span class="badge ${RB[u.role]}">${RL[u.role]}</span></td>
+      <td>${u.pin?'<span class="badge bg-green">Set</span>':'<span class="badge bg-amber">Not set</span>'}</td>
+      <td style="font-size:12px;color:var(--muted);">${u.lastLogin?new Date(u.lastLogin).toLocaleString('en-ZA'):'Never'}</td>
+      <td class="mono">${u.logins||0}</td>
+      <td class="mono">${D.purchases.filter(p=>p.uid===u.id).length}</td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-outline btn-sm" onclick="changeRole(${i})">Role</button>
+          ${u.id!==CU.id?`<button class="btn btn-outline btn-sm" onclick="resetPin(${i})">Reset PIN</button>`:''}
+          ${u.id!==CU.id?`<button class="btn-ghost" onclick="removeUser(${i})">Remove</button>`:'<span style="font-size:11px;color:var(--muted);">You</span>'}
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function changeRole(i) {
+  const u = D.users[i];
+  const r = prompt(`Role for ${u.name}:\nCurrent: ${RL[u.role]}\n\nEnter: owner, manager, kitchen, viewer`);
+  if (!r || !RL[r]) return;
+  u.role = r; logAct('edit',`Changed ${u.name} role to ${RL[r]}`); save(); renderUsers();
+}
+
+function resetPin(i) {
+  const u = D.users[i];
+  if (!confirm(`Reset PIN for ${u.name}?`)) return;
+  u.pin = null; logAct('edit',`Reset PIN for ${u.name}`); save(); renderUsers();
+}
+
+function removeUser(i) {
+  const u = D.users[i];
+  if (!confirm(`Remove ${u.name}?`)) return;
+  logAct('delete',`Removed user: ${u.name}`); D.users.splice(i,1); save(); renderUsers();
+}
+
+// ===================== DASHBOARD =====================
+function renderDashboard() {
+  let allFC=[], allGP=[];
+  MENU.forEach(s=>s.items.forEach(item=>{
+    const price=getPrice(item.name, item.price);
+    const cost=itemCost(item);
+    allFC.push((cost/price)*100);
+    allGP.push(((price-cost)/price)*100);
+  }));
+  const aFC=allFC.reduce((a,b)=>a+b,0)/allFC.length;
+  const aGP=allGP.reduce((a,b)=>a+b,0)/allGP.length;
+  const totSpend=D.purchases.reduce((s,p)=>s+p.amt,0);
+  const flagCnt=D.log.filter(l=>l.type==='flag').length;
+
+  document.getElementById('dash-metrics').innerHTML=`
+    <div class="metric ${aFC<=35?'green':aFC<=40?'amber':'red'}"><div class="metric-label">Avg Food Cost %</div><div class="metric-value">${aFC.toFixed(1)}%</div><div class="metric-sub">Target ≤40%</div></div>
+    <div class="metric green"><div class="metric-label">Avg GP %</div><div class="metric-value">${aGP.toFixed(1)}%</div></div>
+    <div class="metric"><div class="metric-label">Total Spend</div><div class="metric-value" style="font-size:26px;">R${totSpend.toFixed(0)}</div></div>
+    <div class="metric"><div class="metric-label">Purchases</div><div class="metric-value">${D.purchases.length}</div></div>
+    <div class="metric ${flagCnt>0?'amber':'green'}"><div class="metric-label">Active Flags</div><div class="metric-value">${flagCnt}</div><div class="metric-sub">${flagCnt>0?'Review':'Clear'}</div></div>
+  `;
+
+  const catMap={};
+  D.ingredients.forEach(ing=>{
+    if (!catMap[ing.cat]) catMap[ing.cat]={costs:[],count:0};
+    catMap[ing.cat].costs.push(portionCost(ing.name,1));
+    catMap[ing.cat].count++;
+  });
+  document.getElementById('dash-cats').innerHTML = Object.entries(catMap).map(([cat,d])=>{
+    const avg=d.costs.reduce((a,b)=>a+b,0)/d.costs.length;
+    return `<tr><td><span class="cat-tag">${cat}</span></td><td class="mono">R${avg.toFixed(2)}</td><td class="mono">${d.count}</td></tr>`;
+  }).join('');
+
+  const np=document.getElementById('dash-no-purch');
+  const rb=document.getElementById('dash-recent');
+  if (!D.purchases.length) { rb.innerHTML=''; np.style.display='block'; }
+  else {
+    np.style.display='none';
+    rb.innerHTML=[...D.purchases].reverse().slice(0,6).map(p=>`
+      <tr>
+        <td style="font-size:12px;">${p.date}</td><td>${p.ing}</td><td class="mono">${p.qty}</td><td class="mono">R${p.amt.toFixed(2)}</td>
+        <td><div style="display:flex;align-items:center;gap:5px;"><div class="${AV[p.urole]||'av-kitchen'}" style="width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:8px;">${initials(p.uname||'?')}</div><span style="font-size:11px;">${p.uname||'—'}</span></div></td>
+      </tr>`).join('');
+  }
+
+  let rows='';
+  MENU.forEach(s=>{
+    rows+=`<tr class="section-row"><td colspan="7">${s.sec}</td></tr>`;
+    s.items.forEach(item=>{
+      const price=getPrice(item.name, item.price);
+      const cost=itemCost(item);
+      const gp=price-cost;
+      const gpPct=(gp/price)*100;
+      const fcPct=(cost/price)*100;
+      const st=fcSt(fcPct);
+      rows+=`<tr>
+        <td><strong>${item.name}</strong></td><td class="mono">R${price.toFixed(2)}</td><td class="mono">R${cost.toFixed(2)}</td>
+        <td class="mono fc-good">R${gp.toFixed(2)}</td><td class="mono">${gpPct.toFixed(1)}%</td>
+        <td class="mono ${fcPct<=35?'fc-good':fcPct<=40?'fc-warn':'fc-bad'}">${fcPct.toFixed(1)}%</td>
+        <td><span class="badge ${st.cls}">${st.lbl}</span></td>
+      </tr>`;
+    });
+  });
+  document.getElementById('dash-menu').innerHTML=rows;
+}
+
+// ===================== COST HELPERS =====================
+function effCPU(name) {
+  const ing = D.ingredients.find(i=>i.name===name);
+  if (!ing) return 0;
+  const purch = D.purchases.filter(p=>p.ing===name&&p.qty>0&&p.amt>0);
+  if (purch.length) return purch.reduce((s,p)=>s+p.amt,0)/purch.reduce((s,p)=>s+p.qty,0);
+  return ing.cpu;
+}
+
+function portionCost(name, qty=1) {
+  const ing = D.ingredients.find(i=>i.name===name);
+  if (!ing) return 0;
+  const cpu = effCPU(name);
+  if (ing.unit==='kg'||ing.unit==='liter') return cpu*((ing.pg||100)/1000)*qty;
+  if (!ing.pg) return (cpu/4)*qty;
+  if (ing.unit==='dozen') return (cpu/12)*qty;
+  return cpu*(ing.pg/1000)*qty;
+}
+
+function itemCost(item) { return item.ings.reduce((t,l)=>t+portionCost(l.n,l.q),0); }
+
+function fcSt(fc) {
+  if (fc<=30) return {cls:'bg-blue',lbl:'Excellent'};
+  if (fc<=35) return {cls:'bg-green',lbl:'On Target'};
+  if (fc<=40) return {cls:'bg-amber',lbl:'Watch'};
+  return {cls:'bg-red',lbl:'Over Budget'};
+}
+
+// ===================== EXPORT MENU PDF =====================
+function exportMenuPDF() {
+  const sections = MENU.map(s => {
+    const rows = s.items.map(item => {
+      const price = getPrice(item.name, item.price);
+      const desc = item.ings.map(l => l.n).join(', ');
+      return `
+        <tr>
+          <td class="item-name">${item.name}</td>
+          <td class="item-desc">${desc}</td>
+          <td class="item-price">R${price.toFixed(0)}</td>
+        </tr>`;
+    }).join('');
+    return `
+      <div class="section">
+        <div class="section-title">${s.sec}</div>
+        <table class="menu-table">
+          ${rows}
+        </table>
+      </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>The Braai Club — Menu</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background: #1A1410; color: #F5F0E8; font-family: 'DM Sans', sans-serif; }
+
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 0; background: #1A1410; position: relative; }
+
+  /* HEADER */
+  .header { background: #E8571A; padding: 10mm 18mm 8mm; text-align: center; }
+  .brand { font-family: 'Bebas Neue', sans-serif; font-size: 42pt; letter-spacing: 6pt; color: white; line-height:1; }
+  .tagline { font-size: 9pt; font-weight: 600; letter-spacing: 4pt; text-transform: uppercase; color: rgba(255,255,255,0.75); margin-top: 3pt; }
+
+  /* SAUCE STRIP */
+  .sauce-strip { background: #2E2820; display: flex; justify-content: center; gap: 0; border-bottom: 2px solid #E8571A; }
+  .sauce-item { flex: 1; text-align: center; padding: 5mm 0; border-right: 1px solid #3D3630; }
+  .sauce-item:last-child { border-right: none; }
+  .sauce-name { font-size: 8pt; font-weight: 700; letter-spacing: 2pt; color: #E8571A; text-transform: uppercase; }
+  .sauce-desc { font-size: 7.5pt; color: #9B9088; margin-top: 2pt; }
+
+  /* CONTENT */
+  .content { padding: 6mm 18mm; }
+
+  /* SECTION */
+  .section { margin-bottom: 5mm; break-inside: avoid; }
+  .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 11pt; letter-spacing: 2.5pt; color: #E8571A; padding: 4mm 0 2mm; border-bottom: 0.5pt solid #E8571A; margin-bottom: 1.5mm; }
+
+  /* TABLE */
+  .menu-table { width: 100%; border-collapse: collapse; }
+  .menu-table tr { border-bottom: 0.5pt solid #2E2820; }
+  .menu-table tr:nth-child(even) { background: #1F1812; }
+  .menu-table td { padding: 3.5mm 3mm; vertical-align: middle; }
+  .item-name { font-weight: 600; font-size: 10pt; color: #F5F0E8; width: 42%; }
+  .item-desc { font-size: 8pt; color: #9B9088; width: 45%; }
+  .item-price { font-weight: 700; font-size: 11pt; color: #E8571A; text-align: right; width: 13%; white-space: nowrap; }
+
+  /* FOOTER */
+  .footer { background: #2E2820; border-top: 2px solid #E8571A; padding: 5mm 18mm; display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+  .footer-brand { font-family: 'Bebas Neue', sans-serif; font-size: 13pt; letter-spacing: 2pt; color: #F5F0E8; }
+  .footer-note { font-size: 7.5pt; color: #9B9088; text-align: right; }
+
+  /* EXPERIENCE BLOCK */
+  .experience { background: #2E2820; border-left: 3pt solid #E8571A; padding: 4mm 5mm; margin: 4mm 0; border-radius: 2pt; }
+  .exp-title { font-family: 'Bebas Neue', sans-serif; font-size: 10pt; letter-spacing: 2pt; color: #E8571A; margin-bottom: 2mm; }
+  .exp-text { font-size: 8pt; color: #9B9088; line-height: 1.5; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { width: 100%; margin: 0; }
+    .no-break { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="brand">THE BRAAI CLUB</div>
+    <div class="tagline">Braai Done Properly &nbsp;·&nbsp; Johannesburg</div>
+  </div>
+
+  <div class="sauce-strip">
+    <div class="sauce-item">
+      <div class="sauce-name">Jozi Smoke</div>
+      <div class="sauce-desc">Smoky BBQ — bold, deep, fire-kissed</div>
+    </div>
+    <div class="sauce-item">
+      <div class="sauce-name">Jozi Fire</div>
+      <div class="sauce-desc">Peri peri heat — not for the faint-hearted</div>
+    </div>
+  </div>
+
+  <div class="content">
+    ${sections}
+
+    <div class="experience">
+      <div class="exp-title">The Experience</div>
+      <div class="exp-text">Every order is cooked on an open fire — real coal, real heat, fresh ingredients. Braai done properly means it takes time. It will be worth it.</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-brand">THE BRAAI CLUB</div>
+    <div class="footer-note">All prices include VAT &nbsp;·&nbsp; Subject to availability</div>
+  </div>
+</div>
+<script>window.onload = function(){ window.print(); }</script>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+  if (!win) alert('Please allow popups to export the menu PDF.');
+}
+
+// ===================== INIT =====================
+renderUserGrid();
+setInterval(()=>{ if(CU) document.getElementById('live-date').textContent=new Date().toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short',year:'numeric'}).toUpperCase(); }, 60000);
+</script>
+</body>
+</html>
